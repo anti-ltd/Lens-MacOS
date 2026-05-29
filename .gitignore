@@ -1,0 +1,54 @@
+# Build artifacts
+.build/
+build/
+DerivedData/
+*.o
+*.swiftmodule
+*.swiftdoc
+*.swiftsourceinfo
+
+# SwiftPM
+Package.resolved
+.swiftpm/
+Packages/
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# App-specific
+*.app
+*.dmg
+*.zip
+
+# Wrangler (R2 uploads) — local cache holds the Cloudflare account id/name
+.wrangler/
+
+# Local-only tests (Package.swift includes the test target only when present)
+Tests/
+
+# Logs
+*.log
+
+# Image-tool side-effects
+*.original.png
+banner-orig.png
