@@ -78,39 +78,42 @@ public enum Compositor {
 
     // MARK: - Annotations
 
+    /// Bake annotations into the image. Pixel content (the base and the
+    /// pixelate/blur regions that sample it) is composited through Core Graphics
+    /// at exactly w×h — deterministic and orientation-correct, since `CGContext`
+    /// draws a `CGImage` upright. Vector/text marks are drawn into a separate
+    /// flipped AppKit overlay (top-left origin, so `NSImage`/`NSBezierPath`/
+    /// `NSAttributedString` all share the editor's pixel space) and composited on
+    /// top. Mixing a manual CTM flip with `NSImage.draw` was what inverted the
+    /// whole viewport — AppKit only draws upright when the context is genuinely
+    /// `isFlipped`, which `lockFocusFlipped(true)` provides and a CTM scale does not.
     public static func render(annotations: [Annotation], on image: CGImage) -> CGImage {
         let w = image.width, h = image.height
-        // Render into a fresh bitmap rep so the result is exactly w×h pixels,
-        // independent of any screen's backing scale.
-        guard let rep = bitmapRep(width: w, height: h) else { return image }
-        guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return image }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = ctx
-        flipTopLeft(height: h)
+        guard let ctx = context(width: w, height: h) else { return image }
+        let fullRect = CGRect(x: 0, y: 0, width: w, height: h)
 
-        let baseRect = NSRect(x: 0, y: 0, width: w, height: h)
-        NSImage(cgImage: image, size: baseRect.size).draw(in: baseRect)
-        for a in annotations { draw(a, in: image, bounds: baseRect) }
+        // 1. Base, upright.
+        ctx.draw(image, in: fullRect)
 
-        NSGraphicsContext.restoreGraphicsState()
-        return rep.cgImage ?? image
-    }
+        // 2. Sampled effects (pixelate / blur) — Core Image on the base region.
+        for a in annotations where a.kind == .pixelate || a.kind == .blur {
+            drawFiltered(a, base: image, into: ctx)
+        }
 
-    /// Flip the current AppKit context to a top-left origin so annotation pixel
-    /// coordinates draw where expected (NSBitmapImageRep contexts are bottom-left).
-    private static func flipTopLeft(height: Int) {
-        let t = NSAffineTransform()
-        t.translateX(by: 0, yBy: CGFloat(height))
-        t.scaleX(by: 1, yBy: -1)
-        t.concat()
-    }
+        // 3. Vector + text marks — flipped AppKit overlay, then composite.
+        let vectors = annotations.filter { $0.kind != .pixelate && $0.kind != .blur }
+        if !vectors.isEmpty {
+            let overlay = NSImage(size: NSSize(width: w, height: h))
+            overlay.lockFocusFlipped(true) // genuine top-left origin
+            let baseRect = NSRect(x: 0, y: 0, width: w, height: h)
+            for a in vectors { draw(a, in: image, bounds: baseRect) }
+            overlay.unlockFocus()
+            if let ov = overlay.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                ctx.draw(ov, in: fullRect)
+            }
+        }
 
-    private static func bitmapRep(width: Int, height: Int) -> NSBitmapImageRep? {
-        NSBitmapImageRep(
-            bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
-            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
-        )
+        return ctx.makeImage() ?? image
     }
 
     private static func draw(_ a: Annotation, in base: CGImage, bounds: NSRect) {
@@ -139,7 +142,7 @@ public enum Compositor {
         case .counter:
             drawCounter(a)
         case .pixelate, .blur:
-            drawFiltered(a, base: base)
+            break // handled in Core Graphics (drawFiltered) before the overlay
         case .spotlight:
             drawSpotlight(a, bounds: bounds)
         }
@@ -210,13 +213,17 @@ public enum Compositor {
         s.draw(at: NSPoint(x: c.x - sz.width / 2, y: c.y - sz.height / 2))
     }
 
-    private static func drawFiltered(_ a: Annotation, base: CGImage) {
-        let rect = regionRect(a)
-        guard rect.width >= 1, rect.height >= 1 else { return }
-        // Crop the source region (pixel space), filter it, draw it back.
-        let cropRect = CGRect(x: rect.minX, y: CGFloat(base.height) - rect.maxY,
-                              width: rect.width, height: rect.height).integral
-        guard let cut = base.cropping(to: cropRect) else { return }
+    /// Pixelate/blur a region by sampling the base, filtering, and drawing the
+    /// result back through the Core Graphics context. Annotation coords are
+    /// top-left; `CGImage.cropping` is top-left too, while `ctx.draw` is
+    /// bottom-left — so the crop uses the region as-is and the draw flips y.
+    private static func drawFiltered(_ a: Annotation, base: CGImage, into ctx: CGContext) {
+        let region = regionRect(a)
+        guard region.width >= 1, region.height >= 1 else { return }
+        let cropTL = region.integral.intersection(CGRect(x: 0, y: 0, width: base.width, height: base.height))
+        guard !cropTL.isNull, cropTL.width >= 1, cropTL.height >= 1,
+              let cut = base.cropping(to: cropTL) else { return }
+
         let input = CIImage(cgImage: cut)
         let filter: CIFilter?
         if a.kind == .pixelate {
@@ -232,7 +239,10 @@ public enum Compositor {
         }
         guard let output = filter?.outputImage,
               let result = ciContext.createCGImage(output, from: input.extent) else { return }
-        NSImage(cgImage: result, size: rect.size).draw(in: rect)
+
+        let destBL = CGRect(x: cropTL.minX, y: CGFloat(base.height) - cropTL.maxY,
+                            width: cropTL.width, height: cropTL.height)
+        ctx.draw(result, in: destBL)
     }
 
     private static func drawSpotlight(_ a: Annotation, bounds: NSRect) {
@@ -250,39 +260,49 @@ public enum Compositor {
         let iw = CGFloat(image.width), ih = CGFloat(image.height)
         let pad = backdrop.padding
         let outW = Int(iw + pad * 2), outH = Int(ih + pad * 2)
-        guard let rep = bitmapRep(width: outW, height: outH),
-              let gctx = NSGraphicsContext(bitmapImageRep: rep) else { return image }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = gctx
-        flipTopLeft(height: outH)
-        let ctx = gctx.cgContext
+        guard let ctx = context(width: outW, height: outH) else { return image }
+        let fullRect = CGRect(x: 0, y: 0, width: outW, height: outH)
 
-        let fullRect = NSRect(x: 0, y: 0, width: outW, height: outH)
+        // Background fill (bottom-left coords; gradient runs top-left → bottom-right).
         switch backdrop.fill {
         case .transparent:
             break
         case let .solid(c):
-            c.nsColor.setFill(); NSBezierPath(rect: fullRect).fill()
+            ctx.setFillColor(c.cgColor); ctx.fill(fullRect)
         case let .gradient(from, to):
-            NSGradient(starting: from.nsColor, ending: to.nsColor)?.draw(in: fullRect, angle: -45)
+            let space = CGColorSpace(name: CGColorSpace.sRGB)!
+            if let g = CGGradient(colorsSpace: space,
+                                  colors: [from.cgColor, to.cgColor] as CFArray, locations: [0, 1]) {
+                ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: outH),
+                                       end: CGPoint(x: outW, y: 0), options: [])
+            }
         }
 
-        let imageRect = NSRect(x: pad, y: pad, width: iw, height: ih)
+        // The image sits centred; CGContext draws a CGImage upright.
+        let imageRect = CGRect(x: pad, y: pad, width: iw, height: ih)
+        let rounded = CGPath(roundedRect: imageRect,
+                             cornerWidth: backdrop.cornerRadius,
+                             cornerHeight: backdrop.cornerRadius, transform: nil)
+
+        // Cast the shadow from an opaque rounded plate first (a clip would crop
+        // the shadow away), then draw the image clipped to the same corners.
         if backdrop.shadowOpacity > 0 {
-            let shadow = NSShadow()
-            shadow.shadowColor = NSColor.black.withAlphaComponent(backdrop.shadowOpacity)
-            shadow.shadowBlurRadius = backdrop.shadowBlur
-            shadow.shadowOffset = NSSize(width: 0, height: -backdrop.shadowBlur * 0.25)
-            shadow.set()
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: -backdrop.shadowBlur * 0.3),
+                          blur: backdrop.shadowBlur,
+                          color: CGColor(srgbRed: 0, green: 0, blue: 0, alpha: backdrop.shadowOpacity))
+            ctx.addPath(rounded)
+            ctx.setFillColor(CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1))
+            ctx.fillPath()
+            ctx.restoreGState()
         }
         ctx.saveGState()
-        NSBezierPath(roundedRect: imageRect,
-                     xRadius: backdrop.cornerRadius, yRadius: backdrop.cornerRadius).addClip()
-        NSImage(cgImage: image, size: imageRect.size).draw(in: imageRect)
+        ctx.addPath(rounded)
+        ctx.clip()
+        ctx.draw(image, in: imageRect)
         ctx.restoreGState()
 
-        NSGraphicsContext.restoreGraphicsState()
-        return rep.cgImage ?? image
+        return ctx.makeImage() ?? image
     }
 
     // MARK: - Low-level

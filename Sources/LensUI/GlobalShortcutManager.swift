@@ -19,6 +19,16 @@ final class GlobalShortcutManager {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.updateMonitor() }
             .store(in: &cancellables)
+        // Re-arm whenever Lens reactivates — covers the case where the user
+        // grants Accessibility in System Settings and returns: an installed
+        // monitor only starts receiving global key events once trusted, and
+        // re-creating it on activation makes the new grant take effect without
+        // a relaunch.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateMonitor() }
+        }
         updateMonitor()
     }
 

@@ -45,6 +45,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         setupMenuBar()
         GlobalShortcutManager.shared.start()
         suppressAutoOpenedWindows()
+
+        // The global capture hotkeys can only receive key events once Lens is
+        // Accessibility-trusted. Prompt on launch when it isn't — the system
+        // shows its dialog only once per identity, so this guides first-run
+        // setup without nagging. Granting re-arms the monitor.
+        if !CaptureController.hasAccessibilityPermission() {
+            CaptureController.requestAccessibilityPermission()
+        }
     }
 
     // MARK: - Menu bar
