@@ -28,7 +28,10 @@ enum AppStageCapture {
         seed(for: state)
 
         let root: AnyView
-        if editorStates.contains(state) {
+        if state == "studio" {
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+            root = AnyView(StudioShowcase())
+        } else if editorStates.contains(state) {
             NSApp.appearance = NSAppearance(named: .darkAqua)
             root = AnyView(DemoEditor())
         } else {
@@ -131,6 +134,18 @@ private struct DemoEditor: View {
     }
 }
 
+// The Studio output: a believable app capture run through the cinematic
+// compositor (window chrome, gradient backdrop, a title layer + logo bug).
+private struct StudioShowcase: View {
+    var body: some View {
+        Image(nsImage: NSImage(cgImage: AppStageCapture.studioFrame(),
+                               size: NSSize(width: 1, height: 1)))
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 980)
+    }
+}
+
 extension AppStageCapture {
     /// A synthetic gradient image to stand in for a real capture in shots.
     static func demoImage() -> CGImage {
@@ -142,6 +157,63 @@ extension AppStageCapture {
             .draw(in: NSRect(x: 0, y: 0, width: w, height: h), angle: -45)
         img.unlockFocus()
         return img.cgImage(forProposedRect: nil, context: nil, hints: nil)!
+    }
+
+    /// A mock app window (sidebar + content) to stand in for a recorded screen.
+    static func demoScreen() -> CGImage {
+        let w: CGFloat = 1280, h: CGFloat = 800
+        let img = NSImage(size: NSSize(width: w, height: h))
+        img.lockFocus()
+        NSColor(srgbRed: 0.10, green: 0.11, blue: 0.15, alpha: 1).setFill()
+        NSRect(x: 0, y: 0, width: w, height: h).fill()
+        // Sidebar.
+        NSColor(srgbRed: 0.14, green: 0.15, blue: 0.20, alpha: 1).setFill()
+        NSRect(x: 0, y: 0, width: 260, height: h).fill()
+        for i in 0..<7 {
+            NSColor(white: 1, alpha: i == 2 ? 0.16 : 0.06).setFill()
+            NSBezierPath(roundedRect: NSRect(x: 18, y: h - 90 - CGFloat(i) * 64, width: 224, height: 44),
+                         xRadius: 8, yRadius: 8).fill()
+        }
+        // Content cards.
+        let accents = [NSColor(srgbRed: 0.36, green: 0.55, blue: 1, alpha: 1),
+                       NSColor(srgbRed: 0.66, green: 0.33, blue: 0.97, alpha: 1),
+                       NSColor(srgbRed: 0.16, green: 0.78, blue: 0.5, alpha: 1)]
+        for r in 0..<3 {
+            for c in 0..<3 {
+                let x = 300 + CGFloat(c) * 320, y = h - 140 - CGFloat(r) * 210
+                NSColor(white: 1, alpha: 0.05).setFill()
+                NSBezierPath(roundedRect: NSRect(x: x, y: y - 160, width: 290, height: 170), xRadius: 12, yRadius: 12).fill()
+                accents[(r + c) % 3].withAlphaComponent(0.9).setFill()
+                NSBezierPath(roundedRect: NSRect(x: x + 16, y: y - 40, width: 60, height: 24), xRadius: 6, yRadius: 6).fill()
+            }
+        }
+        img.unlockFocus()
+        return img.cgImage(forProposedRect: nil, context: nil, hints: nil)!
+    }
+
+    /// One composed Studio frame: a mock screen framed with window chrome over a
+    /// gradient, with the cinematic cursor + a click ripple and the logo bug —
+    /// the actual output of the Studio renderer.
+    static func studioFrame() -> CGImage {
+        let screen = demoScreen()
+        let size = CGSize(width: screen.width, height: screen.height)
+        // Synthetic events: cursor parked on a card with a click, so the cursor
+        // cinema (enlarged cursor + ripple) reads as a real recording moment.
+        let cx = Double(size.width) * 0.46, cy = Double(size.height) * 0.42
+        var events = RecordingEvents(fps: 30, scale: 1, pixelSize: size,
+                                     regionGlobalPoints: CGRect(origin: .zero, size: size), duration: 1)
+        events.cursors = [.init(t: 0, x: cx, y: cy), .init(t: 1, x: cx, y: cy)]
+        events.clicks = [.init(t: 0.0, x: cx, y: cy, button: 0)]
+
+        let comp = StudioComposer(
+            style: StudioPreset.window.style,
+            camera: CameraStyle(enabled: false),
+            cursor: CursorStyle(enabled: true, size: 2.2, clickRipples: true),
+            watermark: "github.com/anti-ltd/Lens-MacOS",
+            events: events,
+            sourcePixelSize: size)
+        let out = comp.transform(CIImage(cgImage: screen), 0.16)
+        return CIContext().createCGImage(out, from: CGRect(origin: .zero, size: comp.canvasSize))!
     }
 }
 #endif

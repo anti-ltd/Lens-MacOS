@@ -18,6 +18,11 @@ struct CaptureTab: View {
                         }
                         .help(mode.title)
                     }
+                    CircleButton(systemImage: "square.grid.2x2", size: 42) {
+                        NSApp.keyWindow?.close()
+                        GalleryWindowController.open()
+                    }
+                    .help("Open Gallery")
                 }
                 .padding(.vertical, 6)
             }

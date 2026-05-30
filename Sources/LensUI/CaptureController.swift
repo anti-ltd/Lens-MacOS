@@ -23,6 +23,14 @@ public final class CaptureController {
     private var windowPicker: WindowPickerController?
     private var colorLoupe: ColorLoupeController?
 
+    // Video recording state.
+    private var recorder: ScreenRecorder?
+    private var recordingStart: Date?
+    private var tracker: RecordingTracker?
+    private var recordingFileURL: URL?
+    private var webcamRecorder: WebcamRecorder?
+    public var isRecording: Bool { recorder?.isRecording ?? false }
+
     // MARK: - Entry
 
     public func perform(_ mode: CaptureMode) {
@@ -33,6 +41,7 @@ public final class CaptureController {
         case .window:      captureWindow(preset: preset)
         case .scrolling:   captureScrolling(preset: preset)
         case .colorPicker: pickColor()
+        case .video:       toggleRecording()
         }
     }
 
@@ -139,6 +148,168 @@ public final class CaptureController {
         }
     }
 
+    // MARK: - Video recording
+
+    private func toggleRecording() {
+        if isRecording { stopRecording() } else { startRecording() }
+    }
+
+    /// Start a recording, picking the source first when it's a region or window.
+    private func startRecording() {
+        let url = recordingURL()
+        switch LensSettings.shared.recordingSource {
+        case .fullScreen:
+            let point = globalCGPoint()
+            Task {
+                do {
+                    let content = try await CaptureEngine.shareableContent()
+                    guard let display = CaptureEngine.display(containing: point, in: content) else {
+                        throw CaptureEngine.CaptureError.noDisplay
+                    }
+                    try await self.beginRecording(display: display, cropPixels: nil, url: url)
+                } catch { self.failRecording(error) }
+            }
+
+        case .region:
+            let controller = AreaSelectionController(aspect: nil, prompt: "Drag the area to record • Esc to cancel")
+            areaOverlay = controller
+            controller.begin { [weak self] result in
+                self?.areaOverlay = nil
+                guard let self, let result else { return }
+                Task {
+                    do { try await self.beginRecording(display: result.display, cropPixels: result.cropPixels, url: url) }
+                    catch { self.failRecording(error) }
+                }
+            }
+
+        case .window:
+            let controller = WindowPickerController()
+            windowPicker = controller
+            Task {
+                do {
+                    let content = try await CaptureEngine.shareableContent()
+                    controller.begin(windows: content.windows) { [weak self] picked in
+                        self?.windowPicker = nil
+                        guard let self, let picked else { return }
+                        Task {
+                            do { try await self.beginRecording(window: picked, url: url) }
+                            catch { self.failRecording(error) }
+                        }
+                    }
+                } catch { self.windowPicker = nil; self.failRecording(error) }
+            }
+        }
+    }
+
+    private func beginRecording(display: SCDisplay, cropPixels: CGRect?, url: URL) async throws {
+        let s = LensSettings.shared
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let rec = ScreenRecorder()
+        recorder = rec
+        try await rec.startDisplay(display, cropPixels: cropPixels, fps: s.recordingFPS.rawValue,
+                                   codec: s.recordingCodec, showsCursor: s.recordCursor,
+                                   systemAudio: s.recordSystemAudio, microphone: s.recordMicrophone, to: url)
+
+        // Studio event track (cursor / clicks / keys) for the render pass.
+        let scale = CaptureEngine.scale(for: display)
+        let region: CGRect
+        let pixelSize: CGSize
+        if let crop = cropPixels {
+            region = CGRect(x: display.frame.minX + crop.minX / scale, y: display.frame.minY + crop.minY / scale,
+                            width: crop.width / scale, height: crop.height / scale)
+            pixelSize = crop.size
+        } else {
+            region = display.frame
+            pixelSize = CGSize(width: CGFloat(display.width) * scale, height: CGFloat(display.height) * scale)
+        }
+        startTracking(url: url, region: region, scale: scale, pixelSize: pixelSize, fps: s.recordingFPS.rawValue)
+        presentRecordingIndicator()
+    }
+
+    private func beginRecording(window: SCWindow, url: URL) async throws {
+        let s = LensSettings.shared
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let rec = ScreenRecorder()
+        recorder = rec
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        try await rec.startWindow(window, fps: s.recordingFPS.rawValue, codec: s.recordingCodec,
+                                  showsCursor: s.recordCursor,
+                                  systemAudio: s.recordSystemAudio, microphone: s.recordMicrophone,
+                                  scale: scale, to: url)
+        let pixelSize = CGSize(width: window.frame.width * scale, height: window.frame.height * scale)
+        startTracking(url: url, region: window.frame, scale: scale, pixelSize: pixelSize, fps: s.recordingFPS.rawValue)
+        presentRecordingIndicator()
+    }
+
+    private func startTracking(url: URL, region: CGRect, scale: CGFloat, pixelSize: CGSize, fps: Int) {
+        recordingFileURL = url
+        let t = RecordingTracker()
+        t.begin(regionGlobalPoints: region, scale: scale, pixelSize: pixelSize, fps: fps)
+        tracker = t
+
+        // Webcam captured to camera.mov in the session folder for the PiP.
+        if LensSettings.shared.studioWebcam {
+            let camURL = url.deletingLastPathComponent().appendingPathComponent("camera.mov")
+            let wr = WebcamRecorder()
+            webcamRecorder = wr
+            Task { try? await wr.start(to: camURL) }
+        }
+    }
+
+    private func presentRecordingIndicator() {
+        let start = Date()
+        recordingStart = start
+        if LensSettings.shared.playSound { CaptureFeedback.shutter() }
+        RecordingIndicator.show(started: start) { [weak self] in self?.stopRecording() }
+    }
+
+    private func failRecording(_ error: Error) {
+        recorder = nil
+        handle(error)
+    }
+
+    /// Each recording gets its own session folder under `Lens Recordings/`, so
+    /// the video and its event track (and, later, the Studio render) stay
+    /// together instead of scattering loose files across the save folder.
+    private func recordingURL() -> URL {
+        let folder = (LensSettings.shared.saveFolderPath as NSString).expandingTildeInPath
+        let name = OutputWriter.filename(template: LensSettings.shared.filenameTemplate, name: "Lens Recording")
+        let session = URL(fileURLWithPath: folder, isDirectory: true)
+            .appendingPathComponent("Lens Recordings", isDirectory: true)
+            .appendingPathComponent(name, isDirectory: true)
+        return session.appendingPathComponent("screen").appendingPathExtension("mp4")
+    }
+
+    private func stopRecording() {
+        guard let rec = recorder else { return }
+        recorder = nil
+        recordingStart = nil
+        RecordingIndicator.hide()
+        let events = tracker?.finish()
+        tracker = nil
+        let fileURL = recordingFileURL
+        recordingFileURL = nil
+        let webcam = webcamRecorder
+        webcamRecorder = nil
+        Task {
+            await webcam?.stop()
+            let url = (try? await rec.stop()) ?? nil
+            // Persist the Studio event track next to the raw video (consumed by
+            // the render pass in S2+).
+            if let events, let base = url ?? fileURL,
+               let data = try? JSONEncoder().encode(events) {
+                let sidecar = base.deletingLastPathComponent().appendingPathComponent("events.json")
+                try? data.write(to: sidecar)
+            }
+            if LensSettings.shared.playSound { CaptureFeedback.shutter() }
+            if let url {
+                let session = url.deletingLastPathComponent().lastPathComponent
+                CaptureFeedback.toast("Saved to \(session)")
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
+        }
+    }
+
     // MARK: - Capture → compose → route
 
     /// Run a capture closure on a background task, then finish on the main actor.
@@ -160,6 +331,12 @@ public final class CaptureController {
         switch settings.destination {
         case .editor:
             EditorWindowController.present(capture: capture)
+        case .tray:
+            // Rapid capture: frame to the preset (no backdrop — the collage owns
+            // the background) and collect. Don't steal focus; just confirm.
+            let framed = Compositor.apply(constraint: capture.preset.constraint, to: capture.image)
+            CaptureTray.shared.add(framed, preset: capture.preset)
+            CaptureFeedback.toast("Added to tray (\(CaptureTray.shared.count)) — ⌥-click the menu bar to open")
         default:
             let composed = Compositor.compose(
                 base: capture.image,
@@ -169,7 +346,9 @@ public final class CaptureController {
             route(composed, to: settings.destination)
         }
 
-        if settings.alsoCopyToClipboard, settings.destination != .clipboard {
+        // Don't auto-copy when collecting (rapid capture) or when the clipboard
+        // is already the destination.
+        if settings.alsoCopyToClipboard, settings.destination != .clipboard, settings.destination != .tray {
             let composed = Compositor.compose(
                 base: capture.image,
                 constraint: capture.preset.constraint,
@@ -200,6 +379,9 @@ public final class CaptureController {
             CaptureFeedback.toast("Copied to clipboard")
         case .pin:
             PinWindowController.pin(image)
+        case .tray:
+            CaptureTray.shared.add(image, preset: settings.activePreset)
+            CaptureFeedback.toast("Added to tray (\(CaptureTray.shared.count))")
         case .editor:
             break
         }

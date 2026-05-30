@@ -90,6 +90,114 @@ public final class LensSettings: ObservableObject {
         didSet { Self.defaults.set(showThumbnail, forKey: "showThumbnail") }
     }
 
+    // MARK: - Recording
+
+    /// What a screen recording captures (full screen / region / window).
+    @Published public var recordingSource: RecordingSource {
+        didSet { Self.defaults.set(recordingSource.rawValue, forKey: "recordingSource") }
+    }
+
+    /// Recording frame rate.
+    @Published public var recordingFPS: RecordingFPS {
+        didSet { Self.defaults.set(recordingFPS.rawValue, forKey: "recordingFPS") }
+    }
+
+    /// Recording video codec (H.264 / HEVC).
+    @Published public var recordingCodec: VideoCodec {
+        didSet { Self.defaults.set(recordingCodec.rawValue, forKey: "recordingCodec") }
+    }
+
+    /// Include the cursor in recordings (independent of the screenshot setting —
+    /// in a recording the cursor is usually the star).
+    @Published public var recordCursor: Bool {
+        didSet { Self.defaults.set(recordCursor, forKey: "recordCursor") }
+    }
+
+    /// The scene preset the Studio render applies (framing / background / chrome).
+    @Published public var studioPreset: StudioPreset {
+        didSet { Self.defaults.set(studioPreset.rawValue, forKey: "studioPreset") }
+    }
+
+    /// Auto-zoom (the cinematic camera that follows clicks) on Studio renders.
+    @Published public var studioAutoZoom: Bool {
+        didSet { Self.defaults.set(studioAutoZoom, forKey: "studioAutoZoom") }
+    }
+
+    /// Auto-zoom target scale (1 = none).
+    @Published public var studioZoom: Double {
+        didSet { Self.defaults.set(studioZoom, forKey: "studioZoom") }
+    }
+
+    /// Punchy ("pop") zoom easing instead of the smooth ease.
+    @Published public var studioPunchyZoom: Bool {
+        didSet { Self.defaults.set(studioPunchyZoom, forKey: "studioPunchyZoom") }
+    }
+
+    /// The camera tuning derived from the settings above.
+    public var cameraStyle: CameraStyle {
+        CameraStyle(enabled: studioAutoZoom, zoom: CGFloat(studioZoom),
+                    easing: studioPunchyZoom ? .punchy : .smooth)
+    }
+
+    /// Cinematic cursor (synthetic, enlarged) on Studio renders.
+    @Published public var studioCursor: Bool {
+        didSet { Self.defaults.set(studioCursor, forKey: "studioCursor") }
+    }
+
+    /// Cinematic cursor size multiplier.
+    @Published public var studioCursorSize: Double {
+        didSet { Self.defaults.set(studioCursorSize, forKey: "studioCursorSize") }
+    }
+
+    /// Click ripples on Studio renders.
+    @Published public var studioClickRipples: Bool {
+        didSet { Self.defaults.set(studioClickRipples, forKey: "studioClickRipples") }
+    }
+
+    /// Spotlight dim around the cursor (0 = off).
+    @Published public var studioSpotlight: Double {
+        didSet { Self.defaults.set(studioSpotlight, forKey: "studioSpotlight") }
+    }
+
+    public var cursorStyle: CursorStyle {
+        CursorStyle(enabled: studioCursor, size: CGFloat(studioCursorSize),
+                    clickRipples: studioClickRipples, spotlight: studioSpotlight)
+    }
+
+    /// Keystroke overlay (shortcut captions) on Studio renders.
+    @Published public var studioKeystrokes: Bool {
+        didSet { Self.defaults.set(studioKeystrokes, forKey: "studioKeystrokes") }
+    }
+
+    public var keystrokeStyle: KeystrokeStyle {
+        KeystrokeStyle(enabled: studioKeystrokes)
+    }
+
+    /// Webcam picture-in-picture on Studio renders (records `camera.mov`).
+    @Published public var studioWebcam: Bool {
+        didSet { Self.defaults.set(studioWebcam, forKey: "studioWebcam") }
+    }
+    @Published public var studioWebcamSize: Double {
+        didSet { Self.defaults.set(studioWebcamSize, forKey: "studioWebcamSize") }
+    }
+    @Published public var studioWebcamCorner: WebcamStyle.Corner {
+        didSet { Self.defaults.set(studioWebcamCorner.rawValue, forKey: "studioWebcamCorner") }
+    }
+
+    public var webcamStyle: WebcamStyle {
+        WebcamStyle(enabled: studioWebcam, sizeFraction: CGFloat(studioWebcamSize), corner: studioWebcamCorner)
+    }
+
+    /// Mix system audio into the recording (macOS 13+).
+    @Published public var recordSystemAudio: Bool {
+        didSet { Self.defaults.set(recordSystemAudio, forKey: "recordSystemAudio") }
+    }
+
+    /// Mix the microphone into the recording (macOS 15+; ignored on older macOS).
+    @Published public var recordMicrophone: Bool {
+        didSet { Self.defaults.set(recordMicrophone, forKey: "recordMicrophone") }
+    }
+
     // MARK: - Hotkeys
 
     /// Per-mode global hotkeys, keyed by `CaptureMode.rawValue`. JSON-encoded.
@@ -135,6 +243,25 @@ public final class LensSettings: ObservableObject {
         playSound = d.object(forKey: "playSound") as? Bool ?? true
         showThumbnail = d.object(forKey: "showThumbnail") as? Bool ?? true
 
+        recordingSource = RecordingSource(rawValue: d.string(forKey: "recordingSource") ?? "") ?? .fullScreen
+        recordingFPS = RecordingFPS(rawValue: d.object(forKey: "recordingFPS") as? Int ?? 0) ?? .fps60
+        recordingCodec = VideoCodec(rawValue: d.string(forKey: "recordingCodec") ?? "") ?? .h264
+        recordCursor = d.object(forKey: "recordCursor") as? Bool ?? true
+        studioPreset = StudioPreset(rawValue: d.string(forKey: "studioPreset") ?? "") ?? .marketing
+        studioAutoZoom = d.object(forKey: "studioAutoZoom") as? Bool ?? true
+        studioZoom = d.object(forKey: "studioZoom") as? Double ?? 2.0
+        studioPunchyZoom = d.object(forKey: "studioPunchyZoom") as? Bool ?? false
+        studioCursor = d.object(forKey: "studioCursor") as? Bool ?? false
+        studioCursorSize = d.object(forKey: "studioCursorSize") as? Double ?? 1.5
+        studioClickRipples = d.object(forKey: "studioClickRipples") as? Bool ?? true
+        studioSpotlight = d.object(forKey: "studioSpotlight") as? Double ?? 0
+        studioKeystrokes = d.object(forKey: "studioKeystrokes") as? Bool ?? false
+        studioWebcam = d.object(forKey: "studioWebcam") as? Bool ?? false
+        studioWebcamSize = d.object(forKey: "studioWebcamSize") as? Double ?? 0.24
+        studioWebcamCorner = WebcamStyle.Corner(rawValue: d.string(forKey: "studioWebcamCorner") ?? "") ?? .bottomRight
+        recordSystemAudio = d.bool(forKey: "recordSystemAudio")
+        recordMicrophone = d.bool(forKey: "recordMicrophone")
+
         hotkeys = Self.decode([String: HotkeyBinding].self, forKey: "hotkeys") ?? Self.defaultHotkeys
     }
 
@@ -148,6 +275,7 @@ public final class LensSettings: ObservableObject {
             CaptureMode.fullScreen.rawValue:  HotkeyBinding(keyCode: 20, modifiers: ctrlShiftCmd), // 3
             CaptureMode.scrolling.rawValue:   HotkeyBinding(keyCode: 22, modifiers: ctrlShiftCmd), // 6
             CaptureMode.colorPicker.rawValue: HotkeyBinding(keyCode: 7,  modifiers: ctrlShiftCmd), // X
+            CaptureMode.video.rawValue:       HotkeyBinding(keyCode: 9,  modifiers: ctrlShiftCmd), // V
         ]
     }()
 

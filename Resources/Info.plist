@@ -35,7 +35,11 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSScreenCaptureUsageDescription</key>
-	<string>Lens captures your screen, windows, and selected regions to create screenshots.</string>
+	<string>Lens captures your screen, windows, and selected regions to create screenshots and recordings.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Lens records the microphone when you enable it for a screen recording.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Lens records your camera when you enable the webcam bubble for a recording.</string>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
 </dict>

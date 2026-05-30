@@ -52,6 +52,8 @@ public enum CaptureDestination: String, CaseIterable, Codable, Sendable, Identif
     case clipboard
     /// Pin it to a floating always-on-top window.
     case pin
+    /// Collect into the gallery tray for bulk editing / collaging (rapid capture).
+    case tray
 
     public var id: String { rawValue }
 
@@ -61,6 +63,7 @@ public enum CaptureDestination: String, CaseIterable, Codable, Sendable, Identif
         case .file:      return "Save to Folder"
         case .clipboard: return "Copy to Clipboard"
         case .pin:       return "Pin to Screen"
+        case .tray:      return "Add to Tray"
         }
     }
 
@@ -70,6 +73,7 @@ public enum CaptureDestination: String, CaseIterable, Codable, Sendable, Identif
         case .file:      return "folder"
         case .clipboard: return "doc.on.clipboard"
         case .pin:       return "pin"
+        case .tray:      return "square.grid.2x2"
         }
     }
 }

@@ -34,6 +34,99 @@ struct OutputTab: View {
                 }
             }
 
+            CardSection("Recording") {
+                Picker("", selection: $settings.recordingSource) {
+                    ForEach(RecordingSource.allCases) { Label($0.label, systemImage: $0.symbol).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .padding(.vertical, 4)
+                Divider()
+                HStack {
+                    Text("Frame rate").frame(width: 90, alignment: .leading)
+                    Picker("", selection: $settings.recordingFPS) {
+                        ForEach(RecordingFPS.allCases) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden()
+                }
+                .padding(.vertical, 6)
+                Divider()
+                HStack {
+                    Text("Codec").frame(width: 90, alignment: .leading)
+                    Picker("", selection: $settings.recordingCodec) {
+                        ForEach(VideoCodec.allCases) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden()
+                }
+                .padding(.vertical, 6)
+                Divider()
+                ToggleRow("Record cursor", isOn: $settings.recordCursor)
+                Divider()
+                ToggleRow("System audio",
+                          subtitle: "Record the sound your Mac plays",
+                          isOn: $settings.recordSystemAudio)
+                Divider()
+                ToggleRow("Microphone",
+                          subtitle: micAvailable ? "Mix your mic into the recording" : "Requires macOS 15 or later",
+                          isOn: $settings.recordMicrophone)
+                .disabled(!micAvailable)
+            }
+
+            CardSection("Studio frame") {
+                Picker("", selection: $settings.studioPreset) {
+                    ForEach(StudioPreset.allCases) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .padding(.vertical, 4)
+                Text("Applied by **Render Recording…** — backgrounds, rounded window, shadow & chrome.")
+                    .font(.caption).foregroundStyle(.tertiary).padding(.horizontal, 4)
+                Divider()
+                ToggleRow("Auto-zoom",
+                          subtitle: "Cinematic camera that follows your clicks",
+                          isOn: $settings.studioAutoZoom)
+                if settings.studioAutoZoom {
+                    Divider()
+                    SliderRow("Zoom", value: $settings.studioZoom, in: 1.2...3.0, step: 0.1) {
+                        String(format: "%.1f×", $0)
+                    }
+                    Divider()
+                    ToggleRow("Punchy zoom", subtitle: "Snappy \"pop\" instead of a smooth ease",
+                              isOn: $settings.studioPunchyZoom)
+                }
+                Divider()
+                ToggleRow("Cinematic cursor",
+                          subtitle: "Enlarged, smoothed cursor — turn off Record cursor to avoid doubling",
+                          isOn: $settings.studioCursor)
+                if settings.studioCursor {
+                    Divider()
+                    SliderRow("Cursor size", value: $settings.studioCursorSize, in: 1.0...3.0, step: 0.1) {
+                        String(format: "%.1f×", $0)
+                    }
+                    Divider()
+                    ToggleRow("Click ripples", isOn: $settings.studioClickRipples)
+                    Divider()
+                    SliderRow.percent("Spotlight", value: $settings.studioSpotlight)
+                }
+                Divider()
+                ToggleRow("Keystroke overlay",
+                          subtitle: "Show shortcuts (⌘C, ⌃⇧4…) as captions",
+                          isOn: $settings.studioKeystrokes)
+                Divider()
+                ToggleRow("Webcam bubble",
+                          subtitle: "Record the camera and overlay it as a PiP",
+                          isOn: $settings.studioWebcam)
+                if settings.studioWebcam {
+                    Divider()
+                    SliderRow.percent("Webcam size", value: $settings.studioWebcamSize)
+                    Divider()
+                    Picker("", selection: $settings.studioWebcamCorner) {
+                        ForEach(WebcamStyle.Corner.allCases) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.menu).labelsHidden().padding(.vertical, 4)
+                }
+            }
+
             CardSection("Save to") {
                 HStack {
                     Text(abbreviatedPath)
@@ -54,6 +147,11 @@ struct OutputTab: View {
 
             BackdropEditor(backdrop: backdropBinding)
         }
+    }
+
+    /// Microphone capture rides on ScreenCaptureKit's mic path, which is macOS 15+.
+    private var micAvailable: Bool {
+        if #available(macOS 15.0, *) { return true } else { return false }
     }
 
     private var abbreviatedPath: String {

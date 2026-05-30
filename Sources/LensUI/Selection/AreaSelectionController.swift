@@ -155,7 +155,7 @@ private final class SelectionView: NSView {
     /// Build the selection rect, ratio-locked when an aspect is set. Drag
     /// direction is preserved so the box grows toward the pointer.
     private func rect(from a: CGPoint, to b: CGPoint) -> CGRect {
-        var w = b.x - a.x
+        let w = b.x - a.x
         var h = b.y - a.y
         if let aspect, aspect > 0 {
             // Lock height to width; keep the sign of the vertical drag.

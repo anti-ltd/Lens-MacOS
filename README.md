@@ -12,22 +12,22 @@
 
 # Lens
 
-**Precise, repeatable screenshots for your Mac.**
+**Screenshots and cinematic screen recordings for your Mac.**
 
 ![Platform](https://img.shields.io/badge/macOS%2014%2B-black?style=flat-square)
 ![Language](https://img.shields.io/badge/Swift%205.10-orange?style=flat-square&logo=swift)
 [![License](https://img.shields.io/badge/license-CLL%20v1.2-blue?style=flat-square)](LICENSE.md)
-![Bundle](https://img.shields.io/badge/bundle-1.1%20MB-brightgreen?style=flat-square)
-![CPU](https://img.shields.io/badge/idle%20CPU-0.10%25-brightgreen?style=flat-square)
-![Memory](https://img.shields.io/badge/memory-61%20MB-brightgreen?style=flat-square)
+![Bundle](https://img.shields.io/badge/bundle-1.9%20MB-brightgreen?style=flat-square)
+![CPU](https://img.shields.io/badge/idle%20CPU-0.00%25-brightgreen?style=flat-square)
+![Memory](https://img.shields.io/badge/memory-34%20MB-brightgreen?style=flat-square)
 
-`area · window · scroll · annotate`
+`capture · annotate · record · direct`
 
 </div>
 
 ---
 
-> Inspired by [Shottr](https://shottr.cc/) and ratio-locked capture tools like Framéd — one menu-bar app that does both halves: quick, repeatable grabs locked to a frame *and* a full annotation studio. No editor round-trip, no cloud, no clutter.
+> Inspired by [Shottr](https://shottr.cc/) and [Screen Studio](https://screen.studio/) — the precise screenshot tool *and* the cinematic screen recorder, in one menu-bar app you own. No external editor round-trip, no cloud, no subscription.
 
 ---
 
@@ -46,7 +46,7 @@ Use discount code **`READTHESOURCE`** at checkout for a discount — because you
 </div>
 
 <div align="center">
-<img src="Resources/screenshots/output-framed.png" width="380" alt="Output — destinations, formats, and built-in backdrops"> <img src="Resources/screenshots/editor-framed.png" width="380" alt="Editor — arrows, boxes, highlight, blur, redaction and steps">
+<img src="Resources/screenshots/editor-framed.png" width="380" alt="Editor — arrows, boxes, highlight, blur, redaction and steps"> <img src="Resources/screenshots/studio-framed.png" width="380" alt="Studio — auto-zoom, cinematic cursor, backgrounds, titles & music">
 </div>
 
 ---
@@ -63,11 +63,13 @@ Use discount code **`READTHESOURCE`** at checkout for a discount — because you
 
 ## What it is
 
-Lens is a menu-bar screenshot utility that does the two things competitors split between separate apps: **fast, repeatable captures** locked to a ratio or exact pixel size, *and* **deep, in-depth shots** with annotations, backgrounds, scrolling capture and OCR.
+Lens is a menu-bar app that covers the whole arc from *grab* to *ship*:
 
-It lives in the menu bar — left-click for the capture menu, right-click for the settings popover. Every mode has a global hotkey. Grab a region, a window, a whole display, or auto-scroll a long page into one tall image; mark it up; wrap it in a backdrop; and save, copy, or pin it.
+- **Screenshots** — fast, repeatable captures locked to a ratio or exact pixel size, plus a full annotation editor with backgrounds, scrolling capture and OCR.
+- **Screen recording** — full screen, a region, or a window, with optional system audio and mic.
+- **Lens Studio** — turn a raw recording into a polished, App-trailer-style video: auto-zoom that follows your clicks, a cinematic cursor, beautiful backgrounds, keystroke captions, a webcam bubble, title cards, background music, and silence removal — then export MP4 or GIF. Stitch several recordings into one with a project.
 
-Built natively in Swift, AppKit and SwiftUI for macOS 14+. Pixels come from **ScreenCaptureKit**, OCR from **Vision**, compositing from **Core Image** — no Electron, no helper processes, no background daemons, no network.
+Left-click the menu-bar icon for the capture menu, right-click for settings. Every capture mode has a global hotkey. Built natively in Swift, AppKit and SwiftUI for macOS 14+: pixels from **ScreenCaptureKit**, OCR from **Vision**, compositing from **Core Image**, video from **AVFoundation** — no Electron, no helper processes, no background daemons, no network.
 
 ---
 
@@ -80,56 +82,67 @@ Built natively in Swift, AppKit and SwiftUI for macOS 14+. Pixels come from **Sc
 | **Full screen** | The whole display under the pointer. | ⌃⇧⌘3 |
 | **Scrolling** | Auto-scrolls and stitches a long page / chat / document into one image. | ⌃⇧⌘6 |
 | **Color picker** | A magnifier loupe; click copies the hex value. | ⌃⇧⌘X |
+| **Record screen** | Toggle a video recording — full screen, a region, or a window. | ⌃⇧⌘V |
 
-Every hotkey is rebindable in *Settings → Capture*, and the menu items mirror whatever is configured. Defaults layer ⌃ on top of the macOS ⌘⇧3/4/5 set so they never collide.
+Every hotkey is rebindable in *Settings → Capture*, and the menu items mirror whatever is configured.
 
 ---
 
 ## Set the frame once
 
-The repeatable half. A **preset** pins a frame constraint — a locked **aspect ratio** (`16:9`, `1:1`, `9:16`…) or **exact output pixels** (`1920×1080`, `1200×630` Open Graph, `1280×800` Mac App Store). Set one, and every capture comes out matching:
+A **preset** pins a frame constraint — a locked **aspect ratio** (`16:9`, `1:1`, `9:16`…) or **exact output pixels** (`1920×1080`, `1200×630` Open Graph, `1280×800` Mac App Store). Set one, and every capture comes out matching: the area overlay locks to the ratio while you drag, window/full-screen grabs are centre-cropped, and pixel presets resize to the exact size on export. Build your own for docs, social and ads.
 
-- the area overlay **locks to the ratio while you drag**,
-- window and full-screen grabs are **centre-cropped** to it,
-- pixel presets **resize to the exact size** on export.
+## Beautiful backgrounds
 
-Build your own presets for docs, social and ads, and switch between them in a click. No editor round-trip to make a batch of shots line up.
-
----
-
-## Beautiful backgrounds, built in
-
-Every preset can carry a **backdrop** that wraps the capture for presentation:
-
-- **Fill** — solid colour, linear gradient, or **transparent** for a clean cut-out.
-- **Padding** — breathing room between the image and the edge.
-- **Rounded corners** + a soft **drop shadow**.
-
-Pick *Clean*, *Marketing*, or a per-preset backdrop in the editor; transparent + zero padding gives you a bare cut-out for READMEs.
-
----
+Every preset can carry a **backdrop** — solid colour, gradient, or **transparent** cut-out, with padding, rounded corners and a drop shadow. Pick *Clean*, *Marketing*, or tune your own.
 
 ## Annotation editor
 
-Send any capture to the editor and mark it up on a fit-to-window canvas. Annotations are dragged straight onto the image and baked in only on export, so what you draw is exactly what you save.
+Mark up any capture on a fit-to-window canvas; annotations bake in only on export.
 
 - **Shapes** — arrow, line, rectangle, ellipse, freehand.
-- **Emphasis** — highlight, spotlight (dims everything else), numbered steps.
-- **Hide** — pixelate, gaussian blur, or solid redaction burned into the pixels.
-- **Text** — pick a colour and weight.
-- **Undo / redo**, clear, and a live backdrop preview.
-- **Export** — save to your folder, copy to the clipboard, pin to the screen, or **OCR** the text to the clipboard.
-
----
+- **Emphasis** — highlight, spotlight, numbered steps.
+- **Hide** — pixelate, blur, or solid redaction burned into the pixels.
+- **Text**, undo/redo, live backdrop preview.
+- **Export** — save, copy, pin, or **OCR** the text to the clipboard.
 
 ## Scrolling, OCR, pin & pick
 
-- **Scrolling capture** drives real scroll-wheel events and stitches the frames by detecting the vertical overlap between them — works on any scrollable surface, not just web views.
-- **Text recognition (OCR)** pulls selectable text — or decodes QR / barcodes — from any capture, on-device via Vision.
-- **Pin** floats a capture as an always-on-top, draggable reference window.
+- **Scrolling capture** drives real scroll-wheel events and stitches the frames by detecting their vertical overlap.
+- **Text recognition (OCR)** pulls selectable text — or decodes QR / barcodes — on-device via Vision.
+- **Pin** floats a capture as an always-on-top reference window.
 - **Color picker** freezes the display under a magnifier loupe; click copies the hex.
 
-Finished captures route to your choice of destination — **open in the editor**, **save to a folder**, **copy to the clipboard**, or **pin** — with an optional always-copy-to-clipboard and a templated filename (`{name} {date} {time} {seq}`).
+## Rapid capture & collage
+
+Set the destination to **Add to Tray** and captures collect instead of interrupting you — grab a burst, then open the **Gallery** to edit, export, or **Make Collage** (a grid with adjustable columns, spacing, padding, rounded tiles and a background — live preview, then opens in the editor).
+
+## Screen recording
+
+Press **⌃⇧⌘V** to start and again to stop; a floating pill shows a pulsing dot, a timer and a stop button. Each recording is saved as a self-contained session folder under `Lens Recordings/` (the raw video + an event track).
+
+- **Source** — full screen, a dragged region, or a window.
+- **Frame rate** (15 / 24 / 30 / 60) and **codec** (H.264 / HEVC).
+- **System audio** (macOS 13+) and **microphone** (macOS 15+), each optional.
+- **Cinematic cursor** captured independently of the screenshot cursor setting.
+
+---
+
+## Lens Studio — direct it like a trailer
+
+This is where Lens stands apart. Recording captures the raw screen **plus an event track** (cursor path, clicks, keystrokes, and — via Accessibility — the caret while you type). The Studio render then turns that into a polished video, all editable per-recording and reproducible (`studio.json` in the session folder):
+
+- **Scene framing** — drop the window onto a gradient / solid / wallpaper background with padding, rounded corners, a drop shadow, optional macOS-window or browser chrome, a subtle 3D tilt, and an aspect preset (source / 16:9 / 1:1 / **9:16** / 4:3).
+- **Auto-zoom camera** — a zero-phase-smoothed virtual camera that punches in toward your clicks and **typing** (it follows the caret, not the mouse), follows along, then eases back out when idle. Pick a **Smooth** or **Punchy** ("pop") easing.
+- **Cursor cinema** — an enlarged, smoothed cursor with click ripples, an optional spotlight, and hide-when-idle.
+- **Keystroke overlay** — pressed shortcuts (⌘C, ⌃⇧4…) as lower-third keycaps.
+- **Webcam bubble** — a rounded picture-in-picture from your camera.
+- **Logo bug** — a corner wordmark watermark.
+- **Auto-remove silence** — collapse long idle stretches to a short beat.
+- **Background music** — mixed under the recording, ducked so your own audio stays on top.
+- **Intro / outro title cards** and **text / image layers** placed anywhere on the timeline, with fade-in/out and motion.
+
+The **Studio editor** (menu → *Open in Studio Editor…*) gives a live, scrubbable preview with every knob as a control, trim handles, and one-click export to **MP4** or **GIF**. The **project window** (*New Studio Project…*) stitches several recordings end-to-end with an optional **cross-dissolve** between clips.
 
 ---
 
@@ -138,31 +151,39 @@ Finished captures route to your choice of destination — **open in the editor**
 | File | Role |
 |------|------|
 | [`LensApp.swift`](Sources/Lens/LensApp.swift) | `@main` entrypoint, scene declaration, arg routing |
-| [`AppDelegate.swift`](Sources/LensUI/AppDelegate.swift) | Menu-bar item, capture menu, lifecycle, single-instance lock |
-| [`CaptureController.swift`](Sources/LensUI/CaptureController.swift) | Orchestrates each mode → engine → compose → destination; permissions |
-| [`CaptureEngine.swift`](Sources/LensCore/CaptureEngine.swift) | ScreenCaptureKit capture (display / window / region), retina sizing |
+| [`AppDelegate.swift`](Sources/LensUI/AppDelegate.swift) | Menu-bar item, capture/record/studio menu, single-instance lock |
+| [`CaptureController.swift`](Sources/LensUI/CaptureController.swift) | Orchestrates every mode → engine → compose → destination; recording lifecycle; permissions |
+| [`CaptureEngine.swift`](Sources/LensCore/CaptureEngine.swift) | ScreenCaptureKit still capture (display / window / region) |
 | [`ScrollingCapture.swift`](Sources/LensCore/ScrollingCapture.swift) | Scroll-and-stitch with overlap detection |
 | [`Compositor.swift`](Sources/LensCore/Compositor.swift) | Frame-constraint crop/resize, annotation baking, backdrops |
+| [`CollageComposer.swift`](Sources/LensCore/CollageComposer.swift) | Grids a batch of captures into one collage |
 | [`TextRecognizer.swift`](Sources/LensCore/TextRecognizer.swift) | Vision OCR + QR / barcode reading |
-| [`Preset.swift`](Sources/LensCore/Preset.swift) | Frame constraints (ratio / pixel locks) and the built-in set |
-| [`LensSettings.swift`](Sources/LensCore/LensSettings.swift) | Settings + presets + hotkeys, persisted to `UserDefaults` |
-| [`GlobalShortcutManager.swift`](Sources/LensUI/GlobalShortcutManager.swift) | Global hotkey monitor (`NSEvent` global key monitor) |
-| [`AreaSelectionController.swift`](Sources/LensUI/Selection/AreaSelectionController.swift) | Ratio-locked drag overlay |
-| [`WindowPickerController.swift`](Sources/LensUI/Selection/WindowPickerController.swift) | Hover-to-highlight, click-to-capture window picker |
-| [`EditorView.swift`](Sources/LensUI/Editor/EditorView.swift) | The annotation canvas + tool rail |
-| [`ColorLoupeController.swift`](Sources/LensUI/Float/ColorLoupeController.swift) | Magnifier loupe + hex pick |
-| [`PinWindowController.swift`](Sources/LensUI/Float/PinWindowController.swift) | Floating always-on-top pins |
+| [`ScreenRecorder.swift`](Sources/LensCore/ScreenRecorder.swift) | Video recording (SCStream → AVAssetWriter) + audio |
+| [`WebcamRecorder.swift`](Sources/LensCore/WebcamRecorder.swift) | Camera capture for the PiP bubble |
+| [`RecordingEvents.swift`](Sources/LensCore/RecordingEvents.swift) · [`RecordingTracker.swift`](Sources/LensUI/RecordingTracker.swift) · [`AccessibilityProbe.swift`](Sources/LensUI/AccessibilityProbe.swift) | The event track (cursor / clicks / keys / caret) |
+| [`StudioRenderer.swift`](Sources/LensCore/StudioRenderer.swift) | The render spine: decode → transform → encode, trim, post-steps |
+| [`SceneCompositor.swift`](Sources/LensCore/SceneCompositor.swift) | Background, rounded window, shadow, chrome, 3D tilt |
+| [`StudioComposer.swift`](Sources/LensCore/StudioComposer.swift) | Auto-zoom camera, cursor cinema, keystrokes, webcam PiP, watermark, layers |
+| [`SilenceDetector.swift`](Sources/LensCore/SilenceDetector.swift) · [`SilenceCutter.swift`](Sources/LensCore/SilenceCutter.swift) | Idle-gap detection + cutting |
+| [`MusicMixer.swift`](Sources/LensCore/MusicMixer.swift) | Background music + ducking |
+| [`TitleCardRenderer.swift`](Sources/LensCore/TitleCardRenderer.swift) · [`VideoConcatenator.swift`](Sources/LensCore/VideoConcatenator.swift) | Intro/outro cards + concat |
+| [`StudioDocument.swift`](Sources/LensCore/StudioDocument.swift) · [`StudioLayer.swift`](Sources/LensCore/StudioLayer.swift) · [`StudioProject.swift`](Sources/LensCore/StudioProject.swift) | Per-recording config, layers, multi-clip projects |
+| [`ProjectRenderer.swift`](Sources/LensCore/ProjectRenderer.swift) | Multi-clip render + cross-dissolve transitions |
+| [`StudioEditor/`](Sources/LensUI/StudioEditor) | The Studio editor + project windows (live preview, controls, export) |
+| [`LensSettings.swift`](Sources/LensCore/LensSettings.swift) | Settings + presets + hotkeys + Studio defaults |
 
 ---
 
 ## Privacy
 
-Lens needs two macOS permissions, both shown with status + grant buttons in *Settings → About*:
+Everything runs on this Mac. Captures, recordings, OCR and all compositing use Apple's on-device frameworks (ScreenCaptureKit, Vision, Core Image, AVFoundation). Settings, presets and Studio docs live in `UserDefaults` / the session folder. **No analytics · no tracking · no ads · no accounts · no network.**
 
-- **Screen Recording** — to capture any pixels. Triggered on first capture.
-- **Accessibility** — for the global hotkeys (the `NSEvent` global key monitor only receives events once the process is trusted) and for scrolling capture (which posts synthetic scroll events). Prompted on first scrolling capture.
+Permissions (status + grant buttons in *Settings → About*):
 
-Everything stays on this Mac. Captures, OCR and compositing all run on Apple's on-device frameworks (ScreenCaptureKit, Vision, Core Image). Settings, presets and hotkeys live in `UserDefaults`. No analytics · no tracking · no ads · no accounts · no background network.
+- **Screen Recording** — to capture any pixels / video. Triggered on first capture.
+- **Accessibility** — for global hotkeys, scrolling capture, and the typing-aware caret probe. Prompted on first launch.
+- **Microphone** — *only* if you turn on mic recording. Off by default.
+- **Camera** — *only* if you turn on the webcam bubble. Off by default.
 
 ---
 
@@ -170,7 +191,7 @@ Everything stays on this Mac. Captures, OCR and compositing all run on Apple's o
 
 Requires **macOS 14+**, **Swift 5.10**, and the Xcode command-line tools.
 
-Lens depends on **[iUX-MacOS](../iUX-MacOS)** — our shared UX layer (settings popover shell, menu-bar host, overlay windows) — via a local path (`../iUX-MacOS`). Check it out as a sibling directory before building:
+Lens depends on **[iUX-MacOS](../iUX-MacOS)** — our shared UX layer (settings popover shell, menu-bar host, overlay windows) — via a local path. Check it out as a sibling directory:
 
 ```
 Projects/
@@ -182,25 +203,23 @@ Projects/
 git clone git@github.com:anti-ltd/iUX-MacOS.git ../iUX-MacOS   # one-time
 
 make run        # build, bundle Lens.app, launch it
-make bundle     # assemble Lens.app under build/
+make bundle     # assemble Lens.app under build/ (signed)
 make build      # just compile the release binary
 make icon       # rebuild AppIcon.icns from the procedural renderer
 make test       # swift test
-make dmg        # drag-to-install disk image of the local bundle (testing only)
+make dmg        # drag-to-install disk image of the local bundle
 make clean      # remove .build/ and build/
 ```
 
-There are no third-party package dependencies — the only non-system dependency is the first-party [iUX-MacOS](../iUX-MacOS) sibling library above. Everything else is built on system frameworks (AppKit, SwiftUI, ScreenCaptureKit, Vision, Core Image, ImageIO, UniformTypeIdentifiers).
+No third-party package dependencies — only the first-party [iUX-MacOS](../iUX-MacOS) sibling. Everything else is system frameworks (AppKit, SwiftUI, ScreenCaptureKit, Vision, Core Image, AVFoundation, ImageIO, ApplicationServices).
 
-Codesigning uses a local `Lens Dev` code-signing certificate if one exists in your keychain, otherwise it falls back to ad-hoc.
-
-Lens needs **Screen Recording** and **Accessibility** access. macOS ties those grants to the app's signing identity, and an ad-hoc signature changes on every rebuild — so you'd have to re-grant after each build. To make the grants stick, create a reusable self-signed `Lens Dev` certificate once (Keychain Access → Certificate Assistant → Create a Certificate → type *Code Signing*); `make bundle` / `make run` pick it up automatically.
+Lens needs **Screen Recording** and **Accessibility** (and Microphone / Camera only for those features). macOS ties those grants to the app's signing identity, and an ad-hoc signature changes on every rebuild — so to make the grants stick, create a reusable self-signed `Lens Dev` certificate once (Keychain Access → Certificate Assistant → Create a Certificate → type *Code Signing*); `make bundle` / `make run` pick it up automatically.
 
 ---
 
 ## Marketing media (appstage)
 
-Lens implements the `--appstage <state>` driver protocol, so the workspace's appstage pipeline builds it, seeds demo state in an isolated preferences suite, and renders the popover and editor into banner / OG / App-Store frames automatically:
+Lens implements the `--appstage <state>` driver protocol, so the workspace's appstage pipeline builds it, seeds demo state in an isolated preferences suite, and renders the popover / editor / Studio frame into banner, OG and App-Store assets automatically:
 
 ```bash
 cd ../appstage && node bin/appstage.mjs build lens

@@ -88,6 +88,30 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
+        let gallery = NSMenuItem(title: "Open Gallery…", action: #selector(showGallery), keyEquivalent: "")
+        gallery.target = self
+        gallery.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: nil)
+        let trayCount = CaptureTray.shared.count
+        if trayCount > 0 { gallery.title = "Open Gallery (\(trayCount))…" }
+        menu.addItem(gallery)
+
+        let studio = NSMenuItem(title: "Open in Studio Editor…", action: #selector(openStudio), keyEquivalent: "")
+        studio.target = self
+        studio.image = NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: nil)
+        menu.addItem(studio)
+
+        let newProj = NSMenuItem(title: "New Studio Project", action: #selector(newStudioProject), keyEquivalent: "")
+        newProj.target = self
+        newProj.image = NSImage(systemSymbolName: "rectangle.stack.badge.plus", accessibilityDescription: nil)
+        menu.addItem(newProj)
+
+        let openProj = NSMenuItem(title: "Open Studio Project…", action: #selector(openStudioProject), keyEquivalent: "")
+        openProj.target = self
+        openProj.image = NSImage(systemSymbolName: "folder.badge.gearshape", accessibilityDescription: nil)
+        menu.addItem(openProj)
+
+        menu.addItem(.separator())
+
         let settings = NSMenuItem(title: "Settings", action: #selector(showSettings), keyEquivalent: ",")
         settings.target = self
         settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
@@ -116,6 +140,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showSettings() { SettingsWindowOpener.open() }
+
+    @objc private func showGallery() { GalleryWindowController.open() }
+
+    @objc private func openStudio() { StudioEditorWindowController.openWithPicker() }
+    @objc private func newStudioProject() { StudioProjectWindowController.newProject() }
+    @objc private func openStudioProject() { StudioProjectWindowController.openWithPicker() }
 
     // MARK: - Window suppression
 

@@ -13,6 +13,8 @@ public enum CaptureMode: String, CaseIterable, Codable, Sendable, Identifiable {
     case scrolling
     /// Pick a single pixel's colour with a magnifier loupe (no file written).
     case colorPicker
+    /// Toggle screen recording (start on first press, stop on the next).
+    case video
 
     public var id: String { rawValue }
 
@@ -24,6 +26,7 @@ public enum CaptureMode: String, CaseIterable, Codable, Sendable, Identifiable {
         case .fullScreen:  return "Capture Full Screen"
         case .scrolling:   return "Scrolling Capture"
         case .colorPicker: return "Pick Color"
+        case .video:       return "Record Screen"
         }
     }
 
@@ -35,6 +38,7 @@ public enum CaptureMode: String, CaseIterable, Codable, Sendable, Identifiable {
         case .fullScreen:  return "Full Screen"
         case .scrolling:   return "Scrolling"
         case .colorPicker: return "Color"
+        case .video:       return "Record"
         }
     }
 
@@ -45,10 +49,12 @@ public enum CaptureMode: String, CaseIterable, Codable, Sendable, Identifiable {
         case .fullScreen:  return "rectangle.inset.filled"
         case .scrolling:   return "arrow.up.arrow.down.square"
         case .colorPicker: return "eyedropper"
+        case .video:       return "record.circle"
         }
     }
 
-    /// Whether this mode produces an image that flows into the editor/output
-    /// pipeline. `colorPicker` does not — it copies a hex value and stops.
-    public var producesImage: Bool { self != .colorPicker }
+    /// Whether this mode produces a still image that flows into the editor /
+    /// output pipeline. `colorPicker` copies a hex value; `video` records to a
+    /// file — neither feeds the still pipeline.
+    public var producesImage: Bool { self != .colorPicker && self != .video }
 }
